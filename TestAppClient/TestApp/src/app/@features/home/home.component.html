@@ -1,0 +1,8 @@
+<div class="container mt-5">
+  <h1 class="mb-3">Test Table Data</h1>
+
+  <div *ngIf="loading" class="alert alert-info">Loading data...</div>
+  <div *ngIf="error && !loading" class="alert alert-danger">Error loading data: {{ error }}</div>
+
+  <app-table *ngIf="!loading && !error" [data]="tableData"></app-table>
+</div>

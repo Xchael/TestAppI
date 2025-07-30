@@ -1,0 +1,21 @@
+<table class="table table-striped table-bordered table-hover mt-3">
+    <thead class="table-dark">
+        <tr>
+            <th>ID</th>
+            <th>Name</th>
+            <th>Enabled</th>
+            <th>Data</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr *ngFor="let row of data">
+            <td>{{ row.id }}</td>
+            <td>{{ row.name }}</td>
+            <td>
+                <span class="badge"
+                      [ngClass]="row.isEnabled ? 'bg-success' : 'bg-secondary'">{{ row.isEnabled ? 'Yes' : 'No'}}</span>
+            </td>
+            <td>{{ row.data }}</td>
+        </tr>
+    </tbody>
+</table>
