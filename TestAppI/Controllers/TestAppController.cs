@@ -12,7 +12,7 @@ namespace TestAppI.Controllers
 
         // Constructor that initializes the controller with the service.
         // The service is injected to adhere to the Dependency Inversion Principle, allowing for easier testing and maintenance.
-        public TestAppController(ITestAppService service, HttpContext httpContext)
+        public TestAppController(ITestAppService service)
         {
             _service = service;
         }

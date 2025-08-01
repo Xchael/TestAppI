@@ -17,7 +17,7 @@ namespace TestAppITests.TestApp.Controllers
         public TestAppControllerTests()
         {
             _mockService = new Mock<ITestAppService>();
-            _controller = new TestAppController(_mockService.Object, null);
+            _controller = new TestAppController(_mockService.Object);
         }
 
         [Fact]

@@ -19,13 +19,13 @@ builder.Services.AddDbContext<TestAppIDbContext>(options => options.UseSqlServer
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-builder.Services.AddHttpClient();
-
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 builder.Services.AddScoped(typeof(IReadRepository<>), typeof(GenericRepo<>));
 builder.Services.AddScoped(typeof(IWriteRepository<>), typeof(GenericRepo<>));
 builder.Services.AddScoped<ITestAppRepo, TestAppRepo>();
 builder.Services.AddScoped<ITestAppService, TestAppService>();
+
+builder.Services.AddHttpClient();
 
 var app = builder.Build();
 
