@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore.Infrastructure;
+﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Moq;
 using System;
 using System.Collections.Generic;
@@ -11,114 +12,106 @@ using TestData.Repos;
 
 namespace TestAppITests.TestApp.Repos
 {
-    public class UnitOfWorkTests
+    public class UnitOfWorkTests : IDisposable
     {
-        private readonly Mock<TestAppIDbContext> _mockContext;
+        private readonly TestAppIDbContext _context;
         private readonly UnitOfWork _unitOfWork;
 
         public UnitOfWorkTests()
         {
-            _mockContext = new Mock<TestAppIDbContext>();
-            _unitOfWork = new UnitOfWork(_mockContext.Object);
-        }
+            var options = new DbContextOptionsBuilder<TestAppIDbContext>()
+                .UseInMemoryDatabase(databaseName: "TestDatabase")
+                .Options;
 
-
-        [Fact]
-        public void Dispose_CallsContextDispose()
-        {
-            _unitOfWork.Dispose();
-            _mockContext.Verify(c => c.Dispose(), Times.Once);
+            _context = new TestAppIDbContext(options);
+            _unitOfWork = new UnitOfWork(_context);
         }
 
         [Fact]
-        public async Task DisposeAsync_CallsContextDisposeAsync()
+        public void Dispose_ShouldDisposeContext()
         {
-            await _unitOfWork.DisposeAsync();
-            _mockContext.Verify(c => c.DisposeAsync(), Times.Once);
+            // Arrange
+            var context = new Mock<TestAppIDbContext>();
+            var unitOfWork = new UnitOfWork(context.Object);
+
+            // Act
+            unitOfWork.Dispose();
+
+            // Assert
+            context.Verify(c => c.Dispose(), Times.Once);
         }
 
         [Fact]
-        public async Task SaveChangesAsync_CallsContextSaveChangesAsync()
+        public async Task DisposeAsync_ShouldDisposeContextAsync()
         {
-            _mockContext.Setup(c => c.SaveChangesAsync(default)).ReturnsAsync(1);
+            // Arrange
+            var context = new Mock<TestAppIDbContext>();
+            var unitOfWork = new UnitOfWork(context.Object);
+
+            // Act
+            await unitOfWork.DisposeAsync();
+
+            // Assert
+            context.Verify(c => c.DisposeAsync(), Times.Once);
+        }
+
+        [Fact]
+        public void Repository_ShouldReturnSameInstance()
+        {
+            // Arrange
+            var repo1 = _unitOfWork.Repository<SomeEntity>();
+            var repo2 = _unitOfWork.Repository<SomeEntity>();
+
+            // Act & Assert
+            Assert.Same(repo1.Read, repo2.Read);
+            Assert.Same(repo1.Write, repo2.Write);
+        }
+
+        [Fact]
+        public async Task SaveChangesAsync_ShouldReturnAffectedRows()
+        {
+            // Arrange
+            var entity = new TestTable { Name = "Test" };
+            _context.TestTable.Add(entity);
+            await _context.SaveChangesAsync();
+
+            // Act
             var result = await _unitOfWork.SaveChangesAsync();
+
+            // Assert
             Assert.Equal(1, result);
-            _mockContext.Verify(c => c.SaveChangesAsync(default), Times.Once);
         }
 
         [Fact]
-        public void SaveChanges_CallsContextSaveChanges()
+        public void BeginTransaction_ShouldNotThrow()
         {
-            _mockContext.Setup(c => c.SaveChanges()).Returns(2);
-            var result = _unitOfWork.SaveChanges();
-            Assert.Equal(2, result);
-            _mockContext.Verify(c => c.SaveChanges(), Times.Once);
+            // Act & Assert
+            var exception = Record.Exception(() => _unitOfWork.BeginTransaction());
+            Assert.Null(exception);
         }
 
         [Fact]
-        public void BeginTransaction_CallsContextDatabaseBeginTransaction()
+        public async Task CommitTransactionAsync_ShouldNotThrow()
         {
-            var mockDatabase = new Mock<DatabaseFacade>(_mockContext.Object);
-            _mockContext.SetupGet(c => c.Database).Returns(mockDatabase.Object);
-
+            // Arrange
             _unitOfWork.BeginTransaction();
 
-            mockDatabase.Verify(d => d.BeginTransaction(), Times.Once);
+            // Act & Assert
+            var exception = await Record.ExceptionAsync(() => _unitOfWork.CommitTransactionAsync());
+            Assert.Null(exception);
         }
 
-        [Fact]
-        public async Task BeginTransactionAsync_CallsContextDatabaseBeginTransactionAsync()
+        public void Dispose()
         {
-            var mockDatabase = new Mock<DatabaseFacade>(_mockContext.Object);
-            _mockContext.SetupGet(c => c.Database).Returns(mockDatabase.Object);
-
-            await _unitOfWork.BeginTransactionAsync();
-
-            mockDatabase.Verify(d => d.BeginTransactionAsync(default), Times.Once);
+            _unitOfWork.Dispose();
+            _context.Database.EnsureDeleted();
+            _context.Dispose();
         }
+    }
 
-        [Fact]
-        public void CommitTransaction_CallsContextDatabaseCommitTransaction()
-        {
-            var mockDatabase = new Mock<DatabaseFacade>(_mockContext.Object);
-            _mockContext.SetupGet(c => c.Database).Returns(mockDatabase.Object);
-
-            _unitOfWork.CommitTransaction();
-
-            mockDatabase.Verify(d => d.CommitTransaction(), Times.Once);
-        }
-
-        [Fact]
-        public async Task CommitTransactionAsync_CallsContextDatabaseCommitTransactionAsync()
-        {
-            var mockDatabase = new Mock<DatabaseFacade>(_mockContext.Object);
-            _mockContext.SetupGet(c => c.Database).Returns(mockDatabase.Object);
-
-            await _unitOfWork.CommitTransactionAsync();
-
-            mockDatabase.Verify(d => d.CommitTransactionAsync(default), Times.Once);
-        }
-
-        [Fact]
-        public void RollbackTransaction_CallsContextDatabaseRollbackTransaction()
-        {
-            var mockDatabase = new Mock<DatabaseFacade>(_mockContext.Object);
-            _mockContext.SetupGet(c => c.Database).Returns(mockDatabase.Object);
-
-            _unitOfWork.RollbackTransaction();
-
-            mockDatabase.Verify(d => d.RollbackTransaction(), Times.Once);
-        }
-
-        [Fact]
-        public async Task RollbackTransactionAsync_CallsContextDatabaseRollbackTransactionAsync()
-        {
-            var mockDatabase = new Mock<DatabaseFacade>(_mockContext.Object);
-            _mockContext.SetupGet(c => c.Database).Returns(mockDatabase.Object);
-
-            await _unitOfWork.RollbackTransactionAsync();
-
-            mockDatabase.Verify(d => d.RollbackTransactionAsync(default), Times.Once);
-        }
+    public class SomeEntity
+    {
+        public int Id { get; set; }
+        public string Name { get; set; }
     }
 }

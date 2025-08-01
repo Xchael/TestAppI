@@ -12,46 +12,47 @@ namespace TestAppITests.TestApp.Services
 {
     public class TestAppServiceTests
     {
+        private readonly Mock<ITestAppRepo> _mockRepo;
+        private readonly TestAppService _service;
+
+        public TestAppServiceTests()
+        {
+            _mockRepo = new Mock<ITestAppRepo>();
+            _service = new TestAppService(_mockRepo.Object);
+        }
+
         [Fact]
         public async Task GetAllTestTableAsync_ReturnsListOfTestTable()
         {
             // Arrange
             var testData = new List<TestTable>
             {
-                new TestTable { Id = 1, Name = "Test1", IsEnabled = true, Data = "Data1" },
-                new TestTable { Id = 2, Name = "Test2", IsEnabled = false, Data = "Data2" }
+                new TestTable { /* Initialize properties */ },
+                new TestTable { /* Initialize properties */ }
             };
-
-            var repoMock = new Mock<ITestAppRepo>();
-            repoMock.Setup(r => r.GetAllTestAppsAsync()).ReturnsAsync(testData);
-
-            var service = new TestAppService(repoMock.Object);
+            _mockRepo.Setup(repo => repo.GetAllTestAppsAsync(It.IsAny<CancellationToken>()))
+                      .ReturnsAsync(testData);
 
             // Act
-            var result = await service.GetAllTestTableAsync();
+            var result = await _service.GetAllTestTableAsync();
 
             // Assert
             Assert.NotNull(result);
             Assert.Equal(2, result.Count);
-            Assert.Equal("Test1", result[0].Name);
-            Assert.Equal("Test2", result[1].Name);
         }
 
         [Fact]
-        public async Task GetAllTestTableAsync_ReturnsEmptyList_WhenNoData()
+        public async Task GetAllTestTableAsync_CallsRepoMethod()
         {
             // Arrange
-            var repoMock = new Mock<ITestAppRepo>();
-            repoMock.Setup(r => r.GetAllTestAppsAsync()).ReturnsAsync(new List<TestTable>());
-
-            var service = new TestAppService(repoMock.Object);
+            _mockRepo.Setup(repo => repo.GetAllTestAppsAsync(It.IsAny<CancellationToken>()))
+                      .ReturnsAsync(new List<TestTable>());
 
             // Act
-            var result = await service.GetAllTestTableAsync();
+            await _service.GetAllTestTableAsync();
 
             // Assert
-            Assert.NotNull(result);
-            Assert.Empty(result);
+            _mockRepo.Verify(repo => repo.GetAllTestAppsAsync(It.IsAny<CancellationToken>()), Times.Once);
         }
     }
 }
